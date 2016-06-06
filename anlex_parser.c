@@ -1,18 +1,19 @@
 /*
- *	Analizador Léxico	
+ *	Analizador LÃ©xico	
  *	Curso: Compiladores y Lenguajes de Bajo de Nivel
- *	Práctica de Programación Nro. 1
+ *	PrÃ¡ctica de ProgramaciÃ³n Nro. 1
  *	
  *	Descripcion:
- *	Implementa un analizador léxico que reconoce números, identificadores, 
- * 	palabras reservadas, operadores y signos de puntuación para un lenguaje
+ *	Implementa un analizador lÃ©xico que reconoce nÃºmeros, identificadores, 
+ * 	palabras reservadas, operadores y signos de puntuaciÃ³n para un lenguaje
  * 	con sintaxis tipo Pascal.
  *	
  */
 
-/*********** Inclusión de cabecera **************/
+/*********** InclusiÃ³n de cabecera **************/
 #include "anlex.h"
-
+#include <stdio.h>
+#include <locale.h>
 
 /************* Variables globales **************/
 
@@ -31,7 +32,7 @@ int delantero=-1;		// Utilizado por el analizador lexico
 int fin=0;				// Utilizado por el analizador lexico
 int numLinea=1;			// Numero de Linea
 int cantidadError=0;	// Cantidad de errores
-char conjuntosPrimero[11][5][13];//conjuntos primeros de la gramatica dada
+char conjuntosPrimero[11][6][13];//conjuntos primeros de la gramatica dada
 char conjuntosSegundo[11][3][13];//Conjuntos segundos de la gramatica dada
 typedef int bool;		// Tipo de Datos booleanos
 enum { false, true };	// Tipos booleanos
@@ -243,6 +244,57 @@ void sigLex()
 			t.pe=buscar("}");
 			break;
 		}
+		else if (c=='t' || c=='T')
+		{
+			c=fgetc(archivo);
+			if (c=='r' || c=='R'){
+				c=fgetc(archivo);
+				if (c=='u' || c=='U'){
+					c=fgetc(archivo);
+					if (c=='e' || c=='E'){
+						t.pe=buscar("true");
+						e.compLex=BOOL;
+						strcpy(e.complex_cadena,"PR_TRUE");
+					} else{
+						ungetc(c,archivo);
+					} 
+				} else{
+					ungetc(c,archivo);
+				}
+			} else {
+				ungetc(c,archivo);
+			} 
+			
+			break;
+		}
+		else if (c=='f' || c=='F')
+		{
+			c=fgetc(archivo);
+			if (c=='a' || c=='A'){
+				c=fgetc(archivo);
+				if (c=='l' || c=='L'){
+					c=fgetc(archivo);
+					if (c=='s' || c=='S'){
+						c=fgetc(archivo);
+						if (c=='e' || c=='E'){
+							t.pe=buscar("false");
+							e.compLex=BOOL;
+							strcpy(e.complex_cadena,"PR_FALSE");
+						} else{
+							ungetc(c,archivo);
+						}
+					} else{
+						ungetc(c,archivo);
+					} 
+				} else{
+					ungetc(c,archivo);
+				}
+			} else {
+				ungetc(c,archivo);
+			} 
+			
+			break;
+		}
 		else if (c=='\"')
 		{//un caracter o una cadena de caracteres
 			i=0;
@@ -313,48 +365,48 @@ void sigLex()
 
 void element()
 {
-	if (strcmp(t.pe->complex_cadena,"L_CORCHETE") == 0)
+
+		if (strcmp("L_LLAVE",t.pe->complex_cadena)==0)
+		{
+			object();
+		}
+		else if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0)
+		{
+			array();
+		}
+		else
+		{	
+			cantidadError = cantidadError + 1;
+			printf("Error Sintactico \n");
+			panicModeConSincronizacion(1,t.pe->complex_cadena);
+		}
+	
+}
+
+void array(){
+	if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0)
 	{
 		match("L_CORCHETE");
-		tagname();
-		if(strcmp("COMA",t.pe->complex_cadena)==0)
-		{
-			match("COMA");
-			if (strcmp("L_LLAVE",t.pe->complex_cadena)==0)
-			{
-				attributes();
-				match("COMA");
-				if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0)
-				{
-					element_list();	
-				}
-				else if (strcmp("LITERAL_CADENA",t.pe->complex_cadena)==0)
-				{
-					element_list();
-				}
-			}
-			if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0)
-			{
-				element_list();
-			}
-			else if (strcmp("LITERAL_CADENA",t.pe->complex_cadena) == 0)
-			{
-				element_list();
-			}
+		if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0 || strcmp("L_LLAVE",t.pe->complex_cadena)==0){
+			element_list();
 		}
-		match("R_CORCHETE");
-		
+		else if (strcmp("R_CORCHETE",t.pe->complex_cadena)==0)
+		{
+			match("R_CORCHETE");
+		}
+		else
+		{
+			cantidadError = cantidadError + 1;
+			printf("Error Sintactico \n");
+			panicModeConSincronizacion(3,t.pe->complex_cadena);
+		}
 	}
-	else if (strcmp(t.pe->complex_cadena,"LITERAL_CADENA") == 0){
-		match("LITERAL_CADENA");
-	}
-	else{
+	else
+	{
 		cantidadError = cantidadError + 1;
 		printf("Error Sintactico\n");
-		panicModeConSincronizacion(1,t.pe->complex_cadena);
-	
+		panicModeConSincronizacion(3,t.pe->complex_cadena);
 	}
-	
 }
 
 void tagname(){
@@ -363,35 +415,44 @@ void tagname(){
 		}
 		else{
 			cantidadError = cantidadError + 1;
-			printf("Error Sintactico\n");
-			panicModeConSincronizacion(2,t.pe->complex_cadena);
+			printf("Error Sintactico \n");
+			panicModeConSincronizacion(0,t.pe->complex_cadena);
 		}
 }
 
-void attributes(){
+void object(){
+	
 	if (strcmp("L_LLAVE",t.pe->complex_cadena)==0){
 		match("L_LLAVE");
+	
 		if (strcmp("LITERAL_CADENA",t.pe->complex_cadena)==0){
 			attributes_list();
 		}
-		match("R_LLAVE");
-		
-	}
-	else{
+		else if (strcmp("R_LLAVE",t.pe->complex_cadena)==0){
+			match("R_LLAVE");
+		}
+		else
+		{
+			cantidadError = cantidadError + 1;
+			printf("Error Sintactico \n");
+			panicModeConSincronizacion(2,t.pe->complex_cadena);
+		} 
+	} else{
 		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
-		panicModeConSincronizacion(3,t.pe->complex_cadena);
+		printf("Error Sintactico \n");
+		panicModeConSincronizacion(2,t.pe->complex_cadena);
 	}
 }
 
 void attributes_list(){
+	
 	if(strcmp("LITERAL_CADENA",t.pe->complex_cadena)==0){
 		attribute();
 		a();
 	}
 	else{
 		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
+		printf("Error Sintactico \n");
 		panicModeConSincronizacion(4,t.pe->complex_cadena);
 	}
 }
@@ -401,13 +462,6 @@ void a(){
 		match("COMA");
 		attribute();
 		a();
-	}
-	else if (strcmp("R_LLAVE",t.pe->complex_cadena)==0){
-		//nada
-	}else{
-		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
-		panicModeConSincronizacion(5,t.pe->complex_cadena);
 	}	
 }
 
@@ -419,7 +473,7 @@ void attribute(){
 	}
 	else {
 		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
+		printf("Error Sintactico \n");
 		panicModeConSincronizacion(6,t.pe->complex_cadena);
 	}
 }
@@ -429,7 +483,7 @@ void attribute_name(){
 		match("LITERAL_CADENA");
 	}else {
 		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
+		printf("Error Sintactico \n");
 		panicModeConSincronizacion(7,t.pe->complex_cadena);
 	}
 }
@@ -450,22 +504,29 @@ void attribute_value(){
 	else if(strcmp("PR_NULL",t.pe->complex_cadena)==0){
 		match("PR_NULL");
 	}
+	else if (strcmp("L_CORCHETE",t.pe->complex_cadena)==0){
+		element();
+	}
+	else if (strcmp("L_LLAVE",t.pe->complex_cadena)==0){
+		element();
+	}
 	else {
 		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
+		printf("Error Sintactico \n");
 		panicModeConSincronizacion(8,t.pe->complex_cadena);
-	}	
+	}
+		
 }	
 
 
 void element_list(){
-	if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0 || strcmp("LITERAL_CADENA",t.pe->complex_cadena)==0){
+	if(strcmp("L_CORCHETE",t.pe->complex_cadena)==0 || strcmp("L_LLAVE",t.pe->complex_cadena)==0){
 		element();
 		e();
 	}
 	else {
 		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
+		printf("Error Sintactico \n");
 		panicModeConSincronizacion(9,t.pe->complex_cadena);
 	}
 }	
@@ -475,14 +536,6 @@ void e(){
 		match("COMA");
 		element();
 		e();
-	}
-	else if (strcmp("R_CORCHETE",t.pe->complex_cadena)==0){
-		//nada
-	}
-	else{
-		cantidadError = cantidadError + 1;
-		printf("Error Sintactico\n");
-		panicModeConSincronizacion(10,t.pe->complex_cadena);
 	}
 }
 
@@ -500,10 +553,10 @@ void match(char* proximoToken){
 void initConjuntosPrimero(){
 	int i=0;
 	//carga los conjuntos primeros en la matriz
-	/*	0:jsonml
+	/*	0:json
 		1:element
-		2:tag_name
-		3:attributes
+		2:object
+		3:array
 		4:attributes_list
 		5:a
 		6:attribute
@@ -512,11 +565,10 @@ void initConjuntosPrimero(){
 		9:element_list
 		10:e
 	*/
-	
 		strcpy(conjuntosPrimero[1][0],"L_CORCHETE");
-		strcpy(conjuntosPrimero[1][1],"LITERAL_CADENA");
-		strcpy(conjuntosPrimero[2][0],"LITERAL_CADENA");
-		strcpy(conjuntosPrimero[3][0],"L_LLAVE");
+		strcpy(conjuntosPrimero[1][1],"L_LLAVE");
+		strcpy(conjuntosPrimero[2][0],"L_LLAVE");
+		strcpy(conjuntosPrimero[3][0],"L_CORCHETE");
 		strcpy(conjuntosPrimero[4][0],"LITERAL_CADENA");
 		strcpy(conjuntosPrimero[5][0],"COMA");
 		strcpy(conjuntosPrimero[5][1],"EMPTY");
@@ -527,8 +579,10 @@ void initConjuntosPrimero(){
 		strcpy(conjuntosPrimero[8][2],"PR_TRUE");
 		strcpy(conjuntosPrimero[8][3],"PR_FALSE");
 		strcpy(conjuntosPrimero[8][4],"PR_NULL");
+		strcpy(conjuntosPrimero[8][5],"L_CORCHETE");
+		strcpy(conjuntosPrimero[8][6],"L_LLAVE");
 		strcpy(conjuntosPrimero[9][0],"L_CORCHETE");
-		strcpy(conjuntosPrimero[9][1],"LITERAL_CADENA");
+		strcpy(conjuntosPrimero[9][1],"L_LLAVE");
 		strcpy(conjuntosPrimero[10][0],"COMA");
 		strcpy(conjuntosPrimero[10][1],"EMPTY");
 }
@@ -536,10 +590,10 @@ void initConjuntosPrimero(){
 void initConjuntosSegundo(){
 	int i=0;
 	//carga los conjuntos segundos en la matriz
-	/*	0:jsonml
+	/*	0:json
 		1:element
-		2:tag_name
-		3:attributes
+		2:object
+		3:array
 		4:attributes_list
 		5:a
 		6:attribute
@@ -548,14 +602,14 @@ void initConjuntosSegundo(){
 		9:element_list
 		10:e
 	*/
+	
 		
 	strcpy(conjuntosSegundo[1][0],"EOF");
 	strcpy(conjuntosSegundo[1][1],"COMA");
-	strcpy(conjuntosSegundo[1][2],"R_CORCHETE");
 	strcpy(conjuntosSegundo[2][0],"COMA");
-	strcpy(conjuntosSegundo[2][1],"R_CORCHETE");
+	strcpy(conjuntosSegundo[2][1],"EOF");
 	strcpy(conjuntosSegundo[3][0],"COMA");
-	strcpy(conjuntosSegundo[3][1],"R_CORCHETE");
+	strcpy(conjuntosSegundo[3][1],"EOF");
 	strcpy(conjuntosSegundo[4][0],"R_LLAVE");
 	strcpy(conjuntosSegundo[5][0],"R_LLAVE");
 	strcpy(conjuntosSegundo[6][0],"COMA");
@@ -565,7 +619,9 @@ void initConjuntosSegundo(){
 	strcpy(conjuntosSegundo[8][1],"R_LLAVE");
 	strcpy(conjuntosSegundo[9][0],"R_CORCHETE");
 	strcpy(conjuntosSegundo[10][0],"R_CORCHETE");
+
 }
+
 
 bool existeTokenPrimero(int produccion, char* tokenActual){
 	
@@ -603,6 +659,7 @@ void panicModeConSincronizacion(int produccion, char *tokenActual){
 	}else if(existeSegundo || strcmp(tokenActual,"EOF")==0){
 		pop();
 	}
+
 }
 
 void scan(){
@@ -618,7 +675,7 @@ void pop(){
 int main(int argc,char* args[])
 {
 	// inicializar analizador lexico
-
+	
 	initTabla();
 	initTablaSimbolos();
 	initConjuntosPrimero();
@@ -629,7 +686,8 @@ int main(int argc,char* args[])
 		if (!(archivo=fopen(args[1],"rt"))){
 			printf("Archivo no encontrado.\n");
 			exit(1);
-		}	
+		}
+		
 		sigLex();
 		element();
 		int i=0;
